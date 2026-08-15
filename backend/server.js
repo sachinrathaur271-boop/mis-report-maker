@@ -10,7 +10,21 @@ const reportsRoutes = require('./routes/reports');
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+// Allow the production Vercel URL, any Vercel preview URL for this project,
+// and localhost (for local testing). Adjust ALLOWED_ORIGIN_MATCH below if
+// your Vercel project name changes.
+const ALLOWED_ORIGIN_MATCH = /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/;
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser requests (curl, health checks)
+    if (origin === process.env.CLIENT_URL) return callback(null, true);
+    if (origin === 'http://localhost:3000') return callback(null, true);
+    if (ALLOWED_ORIGIN_MATCH.test(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(cookieParser());
 app.use(express.json());
 

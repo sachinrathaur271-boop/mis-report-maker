@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIS Report Maker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--border:#2a2f3a;--text:#eef1f6;--muted:#9aa3b2;--accent:#5b8cff;--accent2:#22c58b;--danger:#ff5c5c;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0b0d12;color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px;}
+  h1{font-size:19px;}
+  input,select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);margin-bottom:10px;font-size:14px;}
+  label{font-size:12.5px;color:var(--muted);}
+  .btn{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:600;cursor:pointer;}
+  .btn.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text);}
+  .btn.green{background:var(--accent2);}
+  .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .hidden{display:none !important;}
+  .error{color:var(--danger);font-size:13px;margin:6px 0;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .kpi{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .kpi .label{color:var(--muted);font-size:12px;}
+  .kpi .value{font-size:20px;font-weight:700;margin-top:4px;}
+  .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .plan{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
+  .plan h3{margin:0 0 6px;}
+  .userbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);}
+  canvas{max-height:260px;}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 MIS Report Maker</h1>
+
+  <!-- AUTH SCREEN -->
+  <div class="card" id="authCard">
+    <div id="loginForm">
+      <h2>Login</h2>
+      <label>Email</label><input id="loginEmail" type="email">
+      <label>Password</label><input id="loginPassword" type="password">
+      <div class="error" id="loginError"></div>
+      <button class="btn" onclick="login()">Login</button>
+      <button class="btn secondary" onclick="toggleAuth()">Create account instead</button>
+    </div>
+    <div id="signupForm" class="hidden">
+      <h2>Create Account</h2>
+      <label>Name</label><input id="suName">
+      <label>Email</label><input id="suEmail" type="email">
+      <label>Password (min 6 chars)</label><input id="suPassword" type="password">
+      <label>Business Type</label>
+      <select id="suBusinessType">
+        <option value="retail">Retail / Sales</option>
+        <option value="mis">General MIS / Operations</option>
+        <option value="finance">Finance / Accounts</option>
+        <option value="general">General / Auto-detect</option>
+      </select>
+      <div class="error" id="signupError"></div>
+      <button class="btn" onclick="signup()">Sign Up</button>
+      <button class="btn secondary" onclick="toggleAuth()">Already have an account</button>
+    </div>
+  </div>
+
+  <!-- APP (shown after login) -->
+  <div id="appSection" class="hidden">
+    <div class="card userbar">
+      <span>Logged in as <b id="userName"></b> (<span id="userPlan"></span> plan — <span id="userUsage"></span>)</span>
+      <button class="btn secondary" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="card">
+      <h2>Upload & Generate Report</h2>
+      <label>Report Type / Business Template</label>
+      <select id="businessTypeSelect">
+        <option value="retail">Retail / Sales</option>
+        <option value="mis">General MIS / Operations</option>
+        <option value="finance">Finance / Accounts</option>
+        <option value="general">General / Auto-detect</option>
+      </select>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      <div class="error" id="processError"></div>
+      <button class="btn" onclick="processFile()">Generate Report</button>
+    </div>
+
+    <div class="card hidden" id="resultsCard">
+      <h2 id="resultTitle">Results</h2>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="charts-grid" id="chartsGrid" style="margin-top:16px;"></div>
+      <div class="row" style="margin-top:16px;">
+        <button class="btn green" onclick="downloadExcel()">⬇ Download Excel</button>
+        <button class="btn" onclick="downloadPdf()">⬇ Download PDF</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Upgrade Plan (Manual UPI Payment)</h2>
+      <p style="color:var(--muted);font-size:13px;">UPI se payment karo, phir screenshot WhatsApp par bhejo. Payment confirm hote hi admin tumhara plan upgrade kar dega (usually within a few hours).</p>
+      <div class="pricing">
+        <div class="plan"><h3>Free</h3><p>3 reports/mo</p><p>₹0</p></div>
+        <div class="plan"><h3>Growth</h3><p>20 reports/mo</p><p>₹199</p><button class="btn" onclick="buyPlan('199')">Upgrade</button></div>
+        <div class="plan"><h3>Pro</h3><p>Unlimited</p><p>₹499</p><button class="btn" onclick="buyPlan('499')">Upgrade</button></div>
+      </div>
+    </div>
+
+    <!-- Manual payment modal -->
+    <div class="card hidden" id="payModal">
+      <h2>Complete Your Payment</h2>
+      <p style="font-size:14px;">Plan: <b id="payPlanLabel"></b> — Amount: <b id="payAmountLabel"></b></p>
+
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;margin:14px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 1 — Pay via UPI</p>
+        <p style="font-size:15px;margin:0 0 10px;">UPI ID: <b id="upiIdText">sachinrathaur271@okhdfcbank</b></p>
+        <a id="upiPayBtn" class="btn green" href="#" target="_blank">📱 Open UPI App & Pay</a>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;">Mobile par khulega to seedha app open hoga (GPay/PhonePe/Paytm). Desktop par UPI ID copy karke manually pay karo.</p>
+      </div>
+
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+        <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 2 — Screenshot WhatsApp par bhejo</p>
+        <a id="waBtn" class="btn" href="#" target="_blank">💬 Send Screenshot on WhatsApp</a>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;">Payment confirm hone ke baad manually plan upgrade ho jayega.</p>
+      </div>
+
+      <button class="btn secondary" style="margin-top:14px;" onclick="closePayModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "http://localhost:5000/api"; // change to your deployed backend URL
+let token = localStorage.getItem('token') || null;
+let currentUser = null;
+let lastResult = null;
+let chartInstances = [];
+
+function toggleAuth(){
+  document.getElementById('loginForm').classList.toggle('hidden');
+  document.getElementById('signupForm').classList.toggle('hidden');
+}
+
+async function api(path, opts={}){
+  const res = await fetch(API_BASE + path, {
+    ...opts,
+    headers: {
+      'Content-Type': opts.body instanceof FormData ? undefined : 'application/json',
+      ...(token ? {Authorization: 'Bearer ' + token} : {}),
+      ...(opts.headers||{})
+    }
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+async function signup(){
+  try{
+    document.getElementById('signupError').textContent = '';
+    const body = {
+      name: document.getElementById('suName').value,
+      email: document.getElementById('suEmail').value,
+      password: document.getElementById('suPassword').value,
+      businessType: document.getElementById('suBusinessType').value
+    };
+    const data = await api('/auth/signup', {method:'POST', body: JSON.stringify(body)});
+    onAuthSuccess(data);
+  }catch(e){ document.getElementById('signupError').textContent = e.message; }
+}
+
+async function login(){
+  try{
+    document.getElementById('loginError').textContent = '';
+    const body = { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value };
+    const data = await api('/auth/login', {method:'POST', body: JSON.stringify(body)});
+    onAuthSuccess(data);
+  }catch(e){ document.getElementById('loginError').textContent = e.message; }
+}
+
+function onAuthSuccess(data){
+  token = data.token;
+  localStorage.setItem('token', token);
+  currentUser = data.user;
+  document.getElementById('authCard').classList.add('hidden');
+  document.getElementById('appSection').classList.remove('hidden');
+  document.getElementById('businessTypeSelect').value = currentUser.businessType || 'general';
+  refreshUserBar();
+}
+
+function refreshUserBar(){
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userPlan').textContent = currentUser.plan;
+  document.getElementById('userUsage').textContent = `${currentUser.reportsUsedThisMonth}/${currentUser.monthlyLimit===Infinity?'∞':currentUser.monthlyLimit} used`;
+}
+
+function logout(){
+  localStorage.removeItem('token');
+  token = null; currentUser = null;
+  document.getElementById('authCard').classList.remove('hidden');
+  document.getElementById('appSection').classList.add('hidden');
+}
+
+// auto-login if token exists
+(async function init(){
+  if(!token) return;
+  try{
+    const data = await api('/auth/me');
+    currentUser = data.user;
+    document.getElementById('authCard').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    refreshUserBar();
+  }catch(e){ localStorage.removeItem('token'); }
+})();
+
+async function processFile(){
+  try{
+    document.getElementById('processError').textContent = '';
+    const fileInput = document.getElementById('fileInput');
+    if(!fileInput.files.length){ document.getElementById('processError').textContent = 'Please choose a file.'; return; }
+
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    fd.append('businessType', document.getElementById('businessTypeSelect').value);
+
+    const data = await api('/reports/process', {method:'POST', body: fd});
+    lastResult = data;
+    currentUser.reportsUsedThisMonth = data.usage.used;
+    refreshUserBar();
+    renderResults(data);
+  }catch(e){ document.getElementById('processError').textContent = e.message; }
+}
+
+function renderResults(data){
+  document.getElementById('resultsCard').classList.remove('hidden');
+  document.getElementById('resultTitle').textContent = `Results — ${data.templateLabel}`;
+
+  const kpiGrid = document.getElementById('kpiGrid');
+  kpiGrid.innerHTML = data.kpis.map(k=>`
+    <div class="kpi"><div class="label">${k.label}</div><div class="value">${typeof k.value==='number' ? k.value.toLocaleString('en-IN',{maximumFractionDigits:1}) : k.value}</div></div>
+  `).join('');
+
+  chartInstances.forEach(c=>c.destroy());
+  chartInstances = [];
+  const chartsGrid = document.getElementById('chartsGrid');
+  chartsGrid.innerHTML = '';
+
+  (data.chartsConfig||[]).forEach((cfg, i)=>{
+    const groupCol = data.colMap[cfg.group];
+    const valCol = data.colMap[cfg.value];
+    if(!groupCol || !valCol) return;
+
+    const box = document.createElement('div');
+    box.innerHTML = `<h3 style="font-size:13px;color:var(--muted);">${cfg.title}</h3><canvas id="chart${i}"></canvas>`;
+    chartsGrid.appendChild(box);
+
+    const agg = {};
+    data.rows.forEach(r=>{
+      let k = cfg.group==='date' ? String(r[groupCol]).slice(0,7) : r[groupCol];
+      agg[k] = (agg[k]||0) + (Number(r[valCol])||0);
+    });
+    const labels = Object.keys(agg).sort();
+    const values = labels.map(l=>agg[l]);
+
+    chartInstances.push(new Chart(document.getElementById('chart'+i), {
+      type: cfg.type,
+      data:{labels, datasets:[{label:cfg.value, data:values, backgroundColor:['#5b8cff','#22c58b','#ffb545','#ff5c5c','#8a5bff'], borderColor:'#5b8cff'}]},
+      options:{plugins:{legend:{display: cfg.type==='doughnut'}}}
+    }));
+  });
+}
+
+function downloadExcel(){
+  if(!lastResult) return;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastResult.rows), "Cleaned Data");
+  const kpiRows = [["KPI","Value"], ...lastResult.kpis.map(k=>[k.label, k.value])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), "KPI Summary");
+  XLSX.writeFile(wb, "MIS_Report.xlsx");
+}
+
+async function downloadPdf(){
+  if(!lastResult) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p','mm','a4');
+  doc.setFontSize(16); doc.text(lastResult.templateLabel + " Report", 14, 18);
+  let y = 30;
+  doc.setFontSize(11);
+  lastResult.kpis.forEach(k=>{ doc.text(`${k.label}: ${k.value}`, 14, y); y+=7; });
+  const canvas = await html2canvas(document.getElementById('chartsGrid'), {backgroundColor:'#171a21'});
+  doc.addPage();
+  doc.addImage(canvas.toDataURL('image/png'), 'PNG', 14, 15, 182, canvas.height*182/canvas.width);
+  doc.save("MIS_Report.pdf");
+}
+
+const UPI_ID = "sachinrathaur271@okhdfcbank";
+const WHATSAPP_NUMBER = "919711685549"; // no + or spaces, WhatsApp link format
+const PLAN_AMOUNTS = { '199': 199, '499': 499 };
+const PLAN_LABELS = { '199': 'Growth (20 reports/mo)', '499': 'Pro (Unlimited)' };
+
+async function buyPlan(plan){
+  const amount = PLAN_AMOUNTS[plan];
+
+  document.getElementById('payPlanLabel').textContent = PLAN_LABELS[plan];
+  document.getElementById('payAmountLabel').textContent = '₹' + amount;
+
+  // UPI deep link — opens GPay/PhonePe/Paytm directly on mobile
+  const upiLink = `upi://pay?pa=${UPI_ID}&pn=MIS%20Report%20Maker&am=${amount}&cu=INR&tn=${encodeURIComponent('Upgrade to ' + PLAN_LABELS[plan])}`;
+  document.getElementById('upiPayBtn').href = upiLink;
+
+  // WhatsApp pre-filled message
+  const waMsg = encodeURIComponent(
+    `Hi, maine MIS Report Maker ka ${PLAN_LABELS[plan]} plan (₹${amount}) ke liye payment kiya hai.\nEmail: ${currentUser.email}\nPayment screenshot attach kar raha/rahi hoon.`
+  );
+  document.getElementById('waBtn').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`;
+
+  // let backend know an upgrade was requested (for your own tracking/admin list)
+  try{
+    await api('/billing/request-upgrade', {method:'POST', body: JSON.stringify({plan})});
+  }catch(e){ /* non-blocking */ }
+
+  document.getElementById('payModal').classList.remove('hidden');
+  document.getElementById('payModal').scrollIntoView({behavior:'smooth'});
+}
+
+function closePayModal(){
+  document.getElementById('payModal').classList.add('hidden');
+}
+</script>
+</body>
+</html>

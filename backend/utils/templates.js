@@ -13,6 +13,7 @@ const TEMPLATES = {
       date: /date|order.?date|invoice.?date/i,
       category: /category|product|item|sku/i,
       region: /region|store|branch|location/i,
+      salesperson: /sales.?person|agent|rep|employee/i,
       qty: /qty|quantity|units?.?sold/i,
       revenue: /revenue|sales|amount|total/i,
       cost: /cost|cogs|purchase.?price/i
@@ -23,13 +24,22 @@ const TEMPLATES = {
       { key: 'avgOrderValue', label: 'Avg Order Value', type: 'avgOf', field: 'revenue' },
       { key: 'grossProfit', label: 'Gross Profit', type: 'diff', fields: ['revenue', 'cost'] },
       { key: 'grossMargin', label: 'Gross Margin %', type: 'marginPct', fields: ['revenue', 'cost'] },
+      { key: 'growthRate', label: 'Revenue Growth (first→last month)', type: 'growthRate', dateField: 'date', valueField: 'revenue' },
+      { key: 'bestMonth', label: 'Best Month', type: 'bestWorstPeriod', mode: 'best', dateField: 'date', valueField: 'revenue' },
+      { key: 'worstMonth', label: 'Weakest Month', type: 'bestWorstPeriod', mode: 'worst', dateField: 'date', valueField: 'revenue' },
       { key: 'topProduct', label: 'Top Selling Product', type: 'topBy', groupField: 'category', valueField: 'revenue' },
-      { key: 'topRegion', label: 'Top Region/Store', type: 'topBy', groupField: 'region', valueField: 'revenue' }
+      { key: 'top3Contribution', label: 'Top 3 Products Contribute', type: 'topNContribution', n: 3, groupField: 'category', valueField: 'revenue' },
+      { key: 'topRegion', label: 'Top Region/Store', type: 'topBy', groupField: 'region', valueField: 'revenue' },
+      { key: 'topSalesperson', label: 'Top Salesperson', type: 'topBy', groupField: 'salesperson', valueField: 'revenue' },
+      { key: 'decliningProducts', label: '⚠️ Declining Products (risk)', type: 'decliningItems', groupField: 'category', valueField: 'revenue', dateField: 'date' },
+      { key: 'underperformingProducts', label: '⚠️ Lowest Performing Products', type: 'underperformers', n: 3, groupField: 'category', valueField: 'revenue' },
+      { key: 'lossMakingProducts', label: '🔴 Loss-Making Products', type: 'lossMakingItems', groupField: 'category', revenueField: 'revenue', costField: 'cost' }
     ],
     charts: [
       { title: 'Revenue by Product', type: 'bar', group: 'category', value: 'revenue' },
       { title: 'Revenue by Region/Store', type: 'doughnut', group: 'region', value: 'revenue' },
-      { title: 'Sales Trend', type: 'line', group: 'date', value: 'revenue' }
+      { title: 'Sales Trend', type: 'line', group: 'date', value: 'revenue' },
+      { title: 'Revenue by Salesperson', type: 'bar', group: 'salesperson', value: 'revenue' }
     ]
   },
 
@@ -69,11 +79,17 @@ const TEMPLATES = {
       { key: 'totalIncome', label: 'Total Income (Credit)', type: 'sum', field: 'credit' },
       { key: 'totalExpense', label: 'Total Expense (Debit)', type: 'sum', field: 'debit' },
       { key: 'netCashflow', label: 'Net Cashflow', type: 'diff', fields: ['credit', 'debit'] },
+      { key: 'growthRate', label: 'Income Growth (first→last month)', type: 'growthRate', dateField: 'date', valueField: 'credit' },
+      { key: 'bestMonth', label: 'Best Income Month', type: 'bestWorstPeriod', mode: 'best', dateField: 'date', valueField: 'credit' },
+      { key: 'worstMonth', label: 'Highest Expense Month', type: 'bestWorstPeriod', mode: 'best', dateField: 'date', valueField: 'debit' },
       { key: 'topExpenseHead', label: 'Top Expense Head', type: 'topBy', groupField: 'account', valueField: 'debit' },
-      { key: 'burnRate', label: 'Avg Monthly Expense', type: 'avgByMonth', field: 'debit', dateField: 'date' }
+      { key: 'top3ExpenseContribution', label: 'Top 3 Expense Heads Contribute', type: 'topNContribution', n: 3, groupField: 'account', valueField: 'debit' },
+      { key: 'burnRate', label: 'Avg Monthly Expense', type: 'avgByMonth', field: 'debit', dateField: 'date' },
+      { key: 'decliningIncome', label: '⚠️ Declining Income Heads (risk)', type: 'decliningItems', groupField: 'account', valueField: 'credit', dateField: 'date' },
+      { key: 'underperformingHeads', label: '⚠️ Lowest Income Heads', type: 'underperformers', n: 3, groupField: 'account', valueField: 'credit' }
     ],
     charts: [
-      { title: 'Income vs Expense', type: 'bar', group: 'account', value: 'debit' },
+      { title: 'Income vs Expense by Head', type: 'bar', group: 'account', value: 'debit' },
       { title: 'Expense by Head', type: 'doughnut', group: 'account', value: 'debit' },
       { title: 'Cashflow Trend', type: 'line', group: 'date', value: 'credit' }
     ]

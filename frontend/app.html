@@ -10,76 +10,98 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
-    --bg:#0a0c10; --panel:#12151c; --panel2:#191d26; --border:#262b36;
+    --bg:#0a0c10; --panel:#12151c; --panel2:#191d26; --panel3:#1f2430; --border:#262b36;
     --text:#f1f4f9; --muted:#9aa4b5; --accent:#5b8cff; --accent2:#22c58b;
-    --danger:#ff5c5c; --grad1:#5b8cff; --grad2:#8a5bff;
+    --danger:#ff5c5c; --warn:#ffb545; --grad1:#5b8cff; --grad2:#8a5bff;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
-  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:18px;}
-  h1{font-size:19px;display:flex;align-items:center;gap:10px;}
-  input,select{width:100%;padding:11px 13px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);margin-bottom:12px;font-size:14px;}
-  input:focus,select:focus{outline:none;border-color:var(--accent);}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;}
+  h1{font-size:19px;display:flex;align-items:center;gap:10px;margin:0;}
+  h2{font-size:16px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 18px;}
+  input,select,textarea{width:100%;padding:11px 13px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);margin-bottom:12px;font-size:14px;font-family:inherit;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);}
   label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px;}
   .btn{background:var(--accent);color:#fff;border:none;padding:11px 20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;transition:filter .15s;}
   .btn:hover{filter:brightness(1.1);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
   .btn.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text);}
   .btn.green{background:var(--accent2);}
+  .btn.purple{background:linear-gradient(135deg,var(--grad1),var(--grad2));}
   .btn.full{width:100%;}
   .row{display:flex;gap:10px;flex-wrap:wrap;}
   .hidden{display:none !important;}
   .error{color:var(--danger);font-size:13px;margin:6px 0;min-height:16px;}
-  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
-  .kpi{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;}
-  .kpi .label{color:var(--muted);font-size:12px;}
-  .kpi .value{font-size:20px;font-weight:700;margin-top:4px;}
+  .userbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap;gap:10px;}
+  canvas{max-height:270px;}
+
+  /* --- Report / Dashboard styling --- */
+  .report-header{
+    background:linear-gradient(135deg, #1a2138 0%, #12151c 60%);
+    border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:20px;position:relative;overflow:hidden;
+  }
+  .report-header::before{
+    content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle, rgba(91,140,255,.25), transparent 70%);
+  }
+  .report-header .tag{display:inline-block;background:rgba(91,140,255,.15);border:1px solid rgba(91,140,255,.35);color:#a9c0ff;font-size:11.5px;padding:4px 10px;border-radius:999px;margin-bottom:10px;}
+  .report-header h2{font-size:24px;margin:0 0 6px;}
+  .report-header .meta{color:var(--muted);font-size:13px;display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;}
+  .report-header .meta b{color:var(--text);}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}
+  .kpi{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+  .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);}
+  .kpi.pos::before{background:var(--accent2);}
+  .kpi.neg::before{background:var(--danger);}
+  .kpi .label{color:var(--muted);font-size:12px;margin-bottom:6px;}
+  .kpi .value{font-size:22px;font-weight:700;}
+
+  .section-title{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin:26px 0 14px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:800px){.charts-grid{grid-template-columns:1fr;}}
+  .chart-box{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .chart-box h3{margin:0 0 12px;font-size:13px;color:var(--muted);font-weight:600;}
+
+  .exec-summary{background:var(--panel3);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:10px;padding:16px 18px;font-size:13.5px;line-height:1.7;color:#dbe1ec;}
+  .insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px;}
+  .insight{background:var(--panel3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .insight .label{color:var(--muted);font-size:11.5px;margin-bottom:4px;}
+  .insight .value{font-size:13.5px;font-weight:600;}
+  .rec-list{margin:10px 0 0;padding-left:20px;font-size:13.5px;line-height:1.9;color:#dbe1ec;}
+
+  .ai-box{background:linear-gradient(135deg, rgba(91,140,255,.08), rgba(138,91,255,.08));border:1px solid rgba(91,140,255,.3);border-radius:14px;padding:20px;}
+  .ai-box .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(91,140,255,.18);border:1px solid rgba(91,140,255,.4);color:#a9c0ff;font-size:11.5px;padding:4px 10px;border-radius:999px;margin-bottom:12px;}
+
   .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .plan{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
   .plan h3{margin:0 0 6px;}
-  .userbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap;gap:10px;}
-  canvas{max-height:260px;}
-  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 
-  /* --- Auth screen (login/signup) --- */
-  .auth-shell{
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
-  }
-  .auth-box{
-    display:grid;grid-template-columns:1fr 1fr;max-width:920px;width:100%;
-    border-radius:20px;overflow:hidden;border:1px solid var(--border);
-    background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);
-  }
+  /* --- Auth screen --- */
+  .auth-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .auth-box{display:grid;grid-template-columns:1fr 1fr;max-width:920px;width:100%;border-radius:20px;overflow:hidden;border:1px solid var(--border);background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);}
   @media(max-width:760px){ .auth-box{grid-template-columns:1fr;} .auth-hero{display:none;} }
-
-  .auth-hero{
-    background:radial-gradient(circle at 30% 20%, #24304f 0%, #0f1420 60%),
-               linear-gradient(160deg, var(--grad1), var(--grad2));
-    padding:40px 34px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;position:relative;
-  }
-  .auth-hero .logo-mark{
-    width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.15);
-    display:flex;align-items:center;justify-content:center;font-size:24px;backdrop-filter:blur(4px);
-    border:1px solid rgba(255,255,255,.25);
-  }
+  .auth-hero{background:radial-gradient(circle at 30% 20%, #24304f 0%, #0f1420 60%), linear-gradient(160deg, var(--grad1), var(--grad2));padding:40px 34px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;position:relative;}
+  .auth-hero .logo-mark{width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:24px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);}
   .auth-hero h2{font-size:26px;line-height:1.3;margin:22px 0 10px;}
-  .auth-hero p{color:rgba(255,255,255,.85);font-size:14px;line-height:1.6;margin:0 0 20px;}
   .auth-hero .feat{display:flex;align-items:center;gap:10px;font-size:13.5px;color:rgba(255,255,255,.92);margin-bottom:10px;}
   .auth-hero .feat .dot{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
-  .auth-hero .mini-chart{
-    margin-top:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
-    border-radius:14px;padding:16px;backdrop-filter:blur(6px);
-  }
+  .auth-hero .mini-chart{margin-top:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:16px;backdrop-filter:blur(6px);}
   .auth-hero .mini-chart .bars{display:flex;align-items:flex-end;gap:6px;height:60px;margin-top:10px;}
   .auth-hero .mini-chart .bars div{flex:1;background:linear-gradient(180deg,#fff,rgba(255,255,255,.4));border-radius:4px 4px 0 0;}
   .auth-hero .mini-chart .caption{font-size:11.5px;color:rgba(255,255,255,.75);}
-
   .auth-form-side{padding:40px 36px;}
   .auth-form-side h1{font-size:22px;margin:0 0 6px;}
   .auth-form-side .sub{color:var(--muted);font-size:13.5px;margin:0 0 26px;}
   .tabs{display:flex;gap:6px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:22px;}
   .tab-btn{flex:1;background:transparent;border:none;color:var(--muted);padding:8px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
   .tab-btn.active{background:var(--accent);color:#fff;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:-2px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -92,8 +114,8 @@
         <div class="logo-mark">📊</div>
         <h2>Raw data se boardroom-ready<br>dashboard, minutes mein.</h2>
         <div class="feat"><span class="dot">✓</span> Auto data cleaning — duplicates, blanks, formatting</div>
-        <div class="feat"><span class="dot">✓</span> Instant KPIs & management summary</div>
-        <div class="feat"><span class="dot">✓</span> Excel + PDF report, one click download</div>
+        <div class="feat"><span class="dot">✓</span> AI-powered executive summary & insights</div>
+        <div class="feat"><span class="dot">✓</span> Excel (with live formulas) + PDF, one click</div>
       </div>
       <div class="mini-chart">
         <div class="caption">Revenue by Region</div>
@@ -103,23 +125,19 @@
         </div>
       </div>
     </div>
-
     <div class="auth-form-side">
       <h1>MIS Report Maker</h1>
       <p class="sub">Business ke liye instant MIS reports.</p>
-
       <div class="tabs">
         <button class="tab-btn active" id="tabLogin" onclick="setAuthTab('login')">Login</button>
         <button class="tab-btn" id="tabSignup" onclick="setAuthTab('signup')">Create Account</button>
       </div>
-
       <div id="loginForm">
         <label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com">
         <label>Password</label><input id="loginPassword" type="password" placeholder="••••••••">
         <div class="error" id="loginError"></div>
         <button class="btn full" onclick="login()">Login</button>
       </div>
-
       <div id="signupForm" class="hidden">
         <label>Name</label><input id="suName" placeholder="Your name">
         <label>Email</label><input id="suEmail" type="email" placeholder="you@example.com">
@@ -138,7 +156,7 @@
   </div>
 </div>
 
-<!-- APP (shown after login) -->
+<!-- APP -->
 <div class="wrap hidden" id="appSection">
   <h1>📊 MIS Report Maker</h1>
 
@@ -149,6 +167,7 @@
 
   <div class="card">
     <h2>Upload & Generate Report</h2>
+    <p class="sub">Excel/CSV upload karo, business type select karo</p>
     <label>Report Type / Business Template</label>
     <select id="businessTypeSelect">
       <option value="retail">Retail / Sales</option>
@@ -161,19 +180,64 @@
     <button class="btn" onclick="processFile()">Generate Report</button>
   </div>
 
-  <div class="card hidden" id="resultsCard">
-    <h2 id="resultTitle">Results</h2>
-    <div class="kpi-grid" id="kpiGrid"></div>
-    <div class="charts-grid" id="chartsGrid" style="margin-top:16px;"></div>
-    <div class="row" style="margin-top:16px;">
-      <button class="btn green" onclick="downloadExcel()">⬇ Download Excel</button>
-      <button class="btn" onclick="downloadPdf()">⬇ Download PDF</button>
+  <!-- RESULTS: management-style dashboard -->
+  <div id="resultsCard" class="hidden">
+
+    <div class="report-header">
+      <span class="tag" id="resultTag">MIS Report</span>
+      <h2 id="resultTitle">Management Report</h2>
+      <div class="meta">
+        <span>Prepared for: <b id="metaUser"></b></span>
+        <span>Generated on: <b id="metaDate"></b></span>
+        <span>Records analyzed: <b id="metaRows"></b></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Key Performance Indicators</div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Visual Dashboard</div>
+      <div class="charts-grid" id="chartsGrid"></div>
+    </div>
+
+    <!-- AI Report Assistant -->
+    <div class="card">
+      <div class="ai-box">
+        <span class="badge">✨ AI Report Assistant</span>
+        <h2 style="margin-top:0;">Kya improve/add karna hai report mein?</h2>
+        <p class="sub" style="margin-bottom:14px;">Free text mein likho — jaise "region-wise profit trend chahiye" ya "kis month sales sabse zyada gira dikhao warning ke saath". AI executive summary aur extra insights bana dega, jo Excel/PDF download mein bhi shamil honge.</p>
+        <textarea id="aiInstructions" rows="3" placeholder="Apni requirement yaha likho..."></textarea>
+        <div class="error" id="aiError"></div>
+        <button class="btn purple" id="aiBtn" onclick="runAI()">✨ Generate AI Insights</button>
+      </div>
+
+      <div id="aiResultBox" class="hidden" style="margin-top:20px;">
+        <div class="section-title">Executive Summary</div>
+        <div class="exec-summary" id="execSummaryText"></div>
+
+        <div class="section-title">Additional Insights</div>
+        <div class="insight-grid" id="extraInsightsGrid"></div>
+
+        <div class="section-title">Recommendations</div>
+        <ul class="rec-list" id="recommendationsList"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Download Final Report</div>
+      <div class="row">
+        <button class="btn green" onclick="downloadExcel()">⬇ Download Excel (with formulas)</button>
+        <button class="btn" onclick="downloadPdf()">⬇ Download PDF</button>
+      </div>
     </div>
   </div>
 
   <div class="card">
     <h2>Upgrade Plan (Manual UPI Payment)</h2>
-    <p style="color:var(--muted);font-size:13px;">UPI se payment karo, phir screenshot WhatsApp par bhejo. Payment confirm hote hi admin tumhara plan upgrade kar dega (usually within a few hours).</p>
+    <p class="sub">UPI se payment karo, phir screenshot WhatsApp par bhejo. Payment confirm hote hi admin tumhara plan upgrade kar dega.</p>
     <div class="pricing">
       <div class="plan"><h3>Free</h3><p>3 reports/mo</p><p>₹0</p></div>
       <div class="plan"><h3>Growth</h3><p>20 reports/mo</p><p>₹199</p><button class="btn" onclick="buyPlan('199')">Upgrade</button></div>
@@ -181,26 +245,21 @@
     </div>
   </div>
 
-  <!-- Manual payment modal -->
   <div class="card hidden" id="payModal">
     <h2>Complete Your Payment</h2>
     <p style="font-size:14px;">Plan: <b id="payPlanLabel"></b> — Amount: <b id="payAmountLabel"></b></p>
-
     <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;margin:14px 0;">
       <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 1 — Pay via UPI</p>
       <p style="font-size:15px;margin:0 0 10px;">UPI ID: <b id="upiIdText">sachinrathaur271@okhdfcbank</b>
         <button class="btn secondary" style="padding:4px 10px;font-size:12px;margin-left:8px;" onclick="copyUpiId()">Copy</button>
       </p>
       <a id="upiPayBtn" class="btn green" href="#" target="_blank">📱 Open UPI App & Pay (mobile only)</a>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Mobile par khulega to seedha app open hoga (GPay/PhonePe/Paytm). Laptop/desktop par upar diye UPI ID ko "Copy" karke apne phone se manually pay karo.</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Mobile par khulega to seedha app open hoga. Desktop par UPI ID copy karke phone se manually pay karo.</p>
     </div>
-
     <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;">
       <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 2 — Screenshot WhatsApp par bhejo</p>
       <a id="waBtn" class="btn" href="#" target="_blank">💬 Send Screenshot on WhatsApp</a>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Payment confirm hone ke baad manually plan upgrade ho jayega.</p>
     </div>
-
     <button class="btn secondary" style="margin-top:14px;" onclick="closePayModal()">Close</button>
   </div>
 </div>
@@ -210,6 +269,7 @@ const API_BASE = "https://mis-report-maker.onrender.com/api"; // apna deployed b
 let token = localStorage.getItem('token') || null;
 let currentUser = null;
 let lastResult = null;
+let lastAI = null;
 let chartInstances = [];
 
 function setAuthTab(which){
@@ -221,15 +281,8 @@ function setAuthTab(which){
 
 async function api(path, opts={}){
   const isFormData = opts.body instanceof FormData;
-  const headers = {
-    ...(token ? {Authorization: 'Bearer ' + token} : {}),
-    ...(opts.headers||{})
-  };
+  const headers = { ...(token ? {Authorization: 'Bearer ' + token} : {}), ...(opts.headers||{}) };
   if(!isFormData) headers['Content-Type'] = 'application/json';
-  // IMPORTANT: for FormData, do NOT set Content-Type manually — the browser
-  // needs to set it itself (with the correct multipart boundary), otherwise
-  // file uploads silently fail on the backend.
-
   const res = await fetch(API_BASE + path, { ...opts, headers });
   const data = await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(data.error || 'Request failed');
@@ -245,44 +298,33 @@ async function signup(){
       password: document.getElementById('suPassword').value,
       businessType: document.getElementById('suBusinessType').value
     };
-    const data = await api('/auth/signup', {method:'POST', body: JSON.stringify(body)});
-    onAuthSuccess(data);
+    onAuthSuccess(await api('/auth/signup', {method:'POST', body: JSON.stringify(body)}));
   }catch(e){ document.getElementById('signupError').textContent = e.message; }
 }
-
 async function login(){
   try{
     document.getElementById('loginError').textContent = '';
     const body = { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value };
-    const data = await api('/auth/login', {method:'POST', body: JSON.stringify(body)});
-    onAuthSuccess(data);
+    onAuthSuccess(await api('/auth/login', {method:'POST', body: JSON.stringify(body)}));
   }catch(e){ document.getElementById('loginError').textContent = e.message; }
 }
-
 function onAuthSuccess(data){
-  token = data.token;
-  localStorage.setItem('token', token);
-  currentUser = data.user;
+  token = data.token; localStorage.setItem('token', token); currentUser = data.user;
   document.getElementById('authCard').classList.add('hidden');
   document.getElementById('appSection').classList.remove('hidden');
   document.getElementById('businessTypeSelect').value = currentUser.businessType || 'general';
   refreshUserBar();
 }
-
 function refreshUserBar(){
   document.getElementById('userName').textContent = currentUser.name;
   document.getElementById('userPlan').textContent = currentUser.plan;
   document.getElementById('userUsage').textContent = `${currentUser.reportsUsedThisMonth}/${currentUser.monthlyLimit===Infinity?'∞':currentUser.monthlyLimit} used`;
 }
-
 function logout(){
-  localStorage.removeItem('token');
-  token = null; currentUser = null;
+  localStorage.removeItem('token'); token = null; currentUser = null;
   document.getElementById('authCard').classList.remove('hidden');
   document.getElementById('appSection').classList.add('hidden');
 }
-
-// auto-login if token exists
 (async function init(){
   if(!token) return;
   try{
@@ -299,13 +341,11 @@ async function processFile(){
     document.getElementById('processError').textContent = '';
     const fileInput = document.getElementById('fileInput');
     if(!fileInput.files.length){ document.getElementById('processError').textContent = 'Please choose a file.'; return; }
-
     const fd = new FormData();
     fd.append('file', fileInput.files[0]);
     fd.append('businessType', document.getElementById('businessTypeSelect').value);
-
     const data = await api('/reports/process', {method:'POST', body: fd});
-    lastResult = data;
+    lastResult = data; lastAI = null;
     currentUser.reportsUsedThisMonth = data.usage.used;
     refreshUserBar();
     renderResults(data);
@@ -314,12 +354,21 @@ async function processFile(){
 
 function renderResults(data){
   document.getElementById('resultsCard').classList.remove('hidden');
-  document.getElementById('resultTitle').textContent = `Results — ${data.templateLabel}`;
+  document.getElementById('resultTag').textContent = data.templateLabel + ' Report';
+  document.getElementById('resultTitle').textContent = `${data.templateLabel} — Management Dashboard`;
+  document.getElementById('metaUser').textContent = currentUser.name;
+  document.getElementById('metaDate').textContent = new Date().toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('metaRows').textContent = data.rows.length;
+
+  document.getElementById('aiResultBox').classList.add('hidden');
+  document.getElementById('aiInstructions').value = '';
 
   const kpiGrid = document.getElementById('kpiGrid');
-  kpiGrid.innerHTML = data.kpis.map(k=>`
-    <div class="kpi"><div class="label">${k.label}</div><div class="value">${typeof k.value==='number' ? k.value.toLocaleString('en-IN',{maximumFractionDigits:1}) : k.value}</div></div>
-  `).join('');
+  kpiGrid.innerHTML = data.kpis.map(k=>{
+    let cls = '';
+    if(typeof k.value==='number'){ cls = k.value>=0 ? 'pos' : 'neg'; }
+    return `<div class="kpi ${cls}"><div class="label">${k.label}</div><div class="value">${typeof k.value==='number' ? k.value.toLocaleString('en-IN',{maximumFractionDigits:1}) : k.value}</div></div>`;
+  }).join('');
 
   chartInstances.forEach(c=>c.destroy());
   chartInstances = [];
@@ -330,11 +379,10 @@ function renderResults(data){
     const groupCol = data.colMap[cfg.group];
     const valCol = data.colMap[cfg.value];
     if(!groupCol || !valCol) return;
-
     const box = document.createElement('div');
-    box.innerHTML = `<h3 style="font-size:13px;color:var(--muted);">${cfg.title}</h3><canvas id="chart${i}"></canvas>`;
+    box.className = 'chart-box';
+    box.innerHTML = `<h3>${cfg.title}</h3><canvas id="chart${i}"></canvas>`;
     chartsGrid.appendChild(box);
-
     const agg = {};
     data.rows.forEach(r=>{
       let k = cfg.group==='date' ? String(r[groupCol]).slice(0,7) : r[groupCol];
@@ -342,77 +390,196 @@ function renderResults(data){
     });
     const labels = Object.keys(agg).sort();
     const values = labels.map(l=>agg[l]);
-
     chartInstances.push(new Chart(document.getElementById('chart'+i), {
       type: cfg.type,
-      data:{labels, datasets:[{label:cfg.value, data:values, backgroundColor:['#5b8cff','#22c58b','#ffb545','#ff5c5c','#8a5bff'], borderColor:'#5b8cff'}]},
-      options:{plugins:{legend:{display: cfg.type==='doughnut'}}}
+      data:{labels, datasets:[{label:cfg.value, data:values, backgroundColor:['#5b8cff','#22c58b','#ffb545','#ff5c5c','#8a5bff','#3ddbe0'], borderColor:'#5b8cff'}]},
+      options:{plugins:{legend:{display: cfg.type==='doughnut', labels:{color:'#9aa4b5'}}}, scales: cfg.type==='doughnut'?{}:{x:{ticks:{color:'#9aa4b5'}},y:{ticks:{color:'#9aa4b5'}}}}
     }));
   });
+
+  document.getElementById('resultsCard').scrollIntoView({behavior:'smooth'});
 }
 
+async function runAI(){
+  if(!lastResult){ return; }
+  const instructions = document.getElementById('aiInstructions').value.trim();
+  document.getElementById('aiError').textContent = '';
+  if(!instructions){ document.getElementById('aiError').textContent = 'Pehle apni requirement likho.'; return; }
+
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  try{
+    const body = {
+      instructions,
+      businessType: lastResult.businessType,
+      headers: lastResult.headers,
+      kpis: lastResult.kpis,
+      sampleRows: lastResult.rows.slice(0, 15)
+    };
+    const ai = await api('/ai/customize-report', {method:'POST', body: JSON.stringify(body)});
+    lastAI = ai;
+
+    document.getElementById('aiResultBox').classList.remove('hidden');
+    document.getElementById('execSummaryText').textContent = ai.executiveSummary || '';
+
+    const grid = document.getElementById('extraInsightsGrid');
+    grid.innerHTML = (ai.extraInsights||[]).map(i=>`<div class="insight"><div class="label">${i.label}</div><div class="value">${i.value}</div></div>`).join('');
+
+    const list = document.getElementById('recommendationsList');
+    list.innerHTML = (ai.recommendations||[]).map(r=>`<li>${r}</li>`).join('');
+
+    document.getElementById('aiResultBox').scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    document.getElementById('aiError').textContent = e.message;
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = '✨ Generate AI Insights';
+  }
+}
+
+// ---------- Excel export WITH live formulas (not static numbers) ----------
 function downloadExcel(){
   if(!lastResult) return;
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastResult.rows), "Cleaned Data");
-  const kpiRows = [["KPI","Value"], ...lastResult.kpis.map(k=>[k.label, k.value])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), "KPI Summary");
-  XLSX.writeFile(wb, "MIS_Report.xlsx");
+  const rows = lastResult.rows;
+  const headers = lastResult.headers;
+  const numericCols = lastResult.numericCols;
+
+  // Sheet 1: Cleaned Data
+  const wsData = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, wsData, "Cleaned Data");
+
+  const lastRow = rows.length + 1; // +1 for header row
+
+  // Sheet 2: KPI Summary — numeric KPIs get real Excel formulas referencing Cleaned Data
+  const kpiSheetRows = [["KPI", "Value / Formula"]];
+  lastResult.kpis.forEach(k=>{
+    kpiSheetRows.push([k.label, typeof k.value === 'number' ? k.value : String(k.value)]);
+  });
+  const wsKpi = XLSX.utils.aoa_to_sheet(kpiSheetRows);
+
+  // Add live SUM/AVERAGE formulas for each numeric column, appended below the KPI list
+  let r = kpiSheetRows.length + 2;
+  XLSX.utils.sheet_add_aoa(wsKpi, [["Column-wise Formulas (live, recalculates if data changes)"]], {origin: `A${r}`});
+  r += 1;
+  XLSX.utils.sheet_add_aoa(wsKpi, [["Column","Total (SUM)","Average","Max","Min"]], {origin: `A${r}`});
+  r += 1;
+  numericCols.forEach(col=>{
+    const colIdx = headers.indexOf(col);
+    const colLetter = XLSX.utils.encode_col(colIdx);
+    const range = `'Cleaned Data'!${colLetter}2:${colLetter}${lastRow}`;
+    wsKpi[`A${r}`] = { t:'s', v: col };
+    wsKpi[`B${r}`] = { t:'n', f: `SUM(${range})` };
+    wsKpi[`C${r}`] = { t:'n', f: `AVERAGE(${range})` };
+    wsKpi[`D${r}`] = { t:'n', f: `MAX(${range})` };
+    wsKpi[`E${r}`] = { t:'n', f: `MIN(${range})` };
+    r++;
+  });
+  const range = XLSX.utils.decode_range(wsKpi['!ref']);
+  range.e.r = r;
+  wsKpi['!ref'] = XLSX.utils.encode_range(range);
+  XLSX.utils.book_append_sheet(wb, wsKpi, "KPI Summary");
+
+  // Sheet 3: Category Summary (pivot-style, with SUMIF formulas)
+  const catCol = lastResult.textCols.find(c=>c !== lastResult.colMap?.date) || lastResult.textCols[0];
+  const valCol = numericCols[0];
+  if(catCol && valCol){
+    const catColIdx = headers.indexOf(catCol);
+    const valColIdx = headers.indexOf(valCol);
+    const catLetter = XLSX.utils.encode_col(catColIdx);
+    const valLetter = XLSX.utils.encode_col(valColIdx);
+    const uniqueCats = [...new Set(rows.map(rw=>rw[catCol]))];
+
+    const sumRows = [[catCol, `Total ${valCol} (live SUMIF)`]];
+    const wsSum = XLSX.utils.aoa_to_sheet(sumRows);
+    uniqueCats.forEach((cat, idx)=>{
+      const rowNum = idx + 2;
+      wsSum[`A${rowNum}`] = { t:'s', v: cat };
+      wsSum[`B${rowNum}`] = { t:'n', f: `SUMIF('Cleaned Data'!${catLetter}2:${catLetter}${lastRow},A${rowNum},'Cleaned Data'!${valLetter}2:${valLetter}${lastRow})` };
+    });
+    const sRange = { s:{r:0,c:0}, e:{r:uniqueCats.length, c:1} };
+    wsSum['!ref'] = XLSX.utils.encode_range(sRange);
+    XLSX.utils.book_append_sheet(wb, wsSum, "Category Summary");
+  }
+
+  // Sheet 4: AI Executive Summary (if generated)
+  if(lastAI){
+    const aiRows = [["AI Executive Summary"], [lastAI.executiveSummary || ''], [], ["Additional Insights"]];
+    (lastAI.extraInsights||[]).forEach(i=> aiRows.push([i.label, i.value]));
+    aiRows.push([]); aiRows.push(["Recommendations"]);
+    (lastAI.recommendations||[]).forEach(r=> aiRows.push([r]));
+    const wsAI = XLSX.utils.aoa_to_sheet(aiRows);
+    XLSX.utils.book_append_sheet(wb, wsAI, "AI Summary");
+  }
+
+  XLSX.writeFile(wb, "MIS_Management_Report.xlsx");
 }
 
 async function downloadPdf(){
   if(!lastResult) return;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('p','mm','a4');
-  doc.setFontSize(16); doc.text(lastResult.templateLabel + " Report", 14, 18);
-  let y = 30;
-  doc.setFontSize(11);
-  lastResult.kpis.forEach(k=>{ doc.text(`${k.label}: ${k.value}`, 14, y); y+=7; });
-  const canvas = await html2canvas(document.getElementById('chartsGrid'), {backgroundColor:'#171a21'});
+
+  doc.setFontSize(18); doc.text(lastResult.templateLabel + " — Management Report", 14, 18);
+  doc.setFontSize(10); doc.setTextColor(130);
+  doc.text(`Prepared for: ${currentUser.name}  |  Date: ${new Date().toLocaleDateString('en-IN')}  |  Records: ${lastResult.rows.length}`, 14, 25);
+  doc.setTextColor(0);
+
+  let y = 36;
+  doc.setFontSize(13); doc.text("Key Performance Indicators", 14, y); y+=7;
+  doc.setFontSize(10);
+  lastResult.kpis.forEach(k=>{
+    doc.text(`${k.label}: ${k.value}`, 14, y); y += 6;
+    if(y > 270){ doc.addPage(); y = 20; }
+  });
+
+  if(lastAI && lastAI.executiveSummary){
+    y += 4;
+    doc.setFontSize(13); doc.text("Executive Summary", 14, y); y += 7;
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(lastAI.executiveSummary, 180);
+    doc.text(lines, 14, y); y += lines.length * 5 + 6;
+
+    if((lastAI.recommendations||[]).length){
+      if(y > 250){ doc.addPage(); y = 20; }
+      doc.setFontSize(13); doc.text("Recommendations", 14, y); y += 7;
+      doc.setFontSize(10);
+      lastAI.recommendations.forEach(r=>{
+        const rl = doc.splitTextToSize('• ' + r, 180);
+        doc.text(rl, 14, y); y += rl.length * 5 + 2;
+        if(y > 270){ doc.addPage(); y = 20; }
+      });
+    }
+  }
+
+  const canvas = await html2canvas(document.getElementById('chartsGrid'), {backgroundColor:'#12151c'});
   doc.addPage();
-  doc.addImage(canvas.toDataURL('image/png'), 'PNG', 14, 15, 182, canvas.height*182/canvas.width);
-  doc.save("MIS_Report.pdf");
+  doc.setFontSize(13); doc.text("Visual Dashboard", 14, 15);
+  doc.addImage(canvas.toDataURL('image/png'), 'PNG', 14, 20, 182, canvas.height*182/canvas.width);
+
+  doc.save("MIS_Management_Report.pdf");
 }
 
 const UPI_ID = "sachinrathaur271@okhdfcbank";
-const WHATSAPP_NUMBER = "919711685549"; // no + or spaces, WhatsApp link format
+const WHATSAPP_NUMBER = "919711685549";
 const PLAN_AMOUNTS = { '199': 199, '499': 499 };
 const PLAN_LABELS = { '199': 'Growth (20 reports/mo)', '499': 'Pro (Unlimited)' };
 
 async function buyPlan(plan){
   const amount = PLAN_AMOUNTS[plan];
-
   document.getElementById('payPlanLabel').textContent = PLAN_LABELS[plan];
   document.getElementById('payAmountLabel').textContent = '₹' + amount;
-
-  // UPI deep link — opens GPay/PhonePe/Paytm directly on mobile
   const upiLink = `upi://pay?pa=${UPI_ID}&pn=MIS%20Report%20Maker&am=${amount}&cu=INR&tn=${encodeURIComponent('Upgrade to ' + PLAN_LABELS[plan])}`;
   document.getElementById('upiPayBtn').href = upiLink;
-
-  // WhatsApp pre-filled message
-  const waMsg = encodeURIComponent(
-    `Hi, maine MIS Report Maker ka ${PLAN_LABELS[plan]} plan (₹${amount}) ke liye payment kiya hai.\nEmail: ${currentUser.email}\nPayment screenshot attach kar raha/rahi hoon.`
-  );
+  const waMsg = encodeURIComponent(`Hi, maine MIS Report Maker ka ${PLAN_LABELS[plan]} plan (₹${amount}) ke liye payment kiya hai.\nEmail: ${currentUser.email}\nPayment screenshot attach kar raha/rahi hoon.`);
   document.getElementById('waBtn').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`;
-
-  // let backend know an upgrade was requested (for your own tracking/admin list)
-  try{
-    await api('/billing/request-upgrade', {method:'POST', body: JSON.stringify({plan})});
-  }catch(e){ /* non-blocking */ }
-
+  try{ await api('/billing/request-upgrade', {method:'POST', body: JSON.stringify({plan})}); }catch(e){}
   document.getElementById('payModal').classList.remove('hidden');
   document.getElementById('payModal').scrollIntoView({behavior:'smooth'});
 }
-
-function closePayModal(){
-  document.getElementById('payModal').classList.add('hidden');
-}
-
-function copyUpiId(){
-  navigator.clipboard.writeText(UPI_ID).then(()=>{
-    alert('UPI ID copied: ' + UPI_ID);
-  });
-}
+function closePayModal(){ document.getElementById('payModal').classList.add('hidden'); }
+function copyUpiId(){ navigator.clipboard.writeText(UPI_ID).then(()=>alert('UPI ID copied: ' + UPI_ID)); }
 </script>
 </body>
 </html>

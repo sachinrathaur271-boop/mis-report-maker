@@ -12,7 +12,7 @@ const TEMPLATES = {
     columnHints: {
       date: /date|order.?date|invoice.?date/i,
       category: /category|product|item|sku/i,
-      region: /region|store|branch|location/i,
+      region: /region|store|branch|location|city/i,
       salesperson: /sales.?person|agent|rep|employee/i,
       qty: /qty|quantity|units?.?sold/i,
       revenue: /revenue|sales|amount|total/i,
@@ -112,8 +112,24 @@ const TEMPLATES = {
 function mapColumns(headers, template) {
   const map = {};
   Object.entries(template.columnHints || {}).forEach(([logicalName, regex]) => {
-    const match = headers.find((h) => regex.test(h));
-    if (match) map[logicalName] = match;
+    const candidates = headers.filter((h) => regex.test(h));
+    if (!candidates.length) return;
+    if (candidates.length === 1) { map[logicalName] = candidates[0]; return; }
+
+    // Multiple headers match the same hint (e.g. both "Unit Cost" and "Total
+    // Cost" match /cost/i). Score each candidate so we pick the one that
+    // represents the ORDER-LEVEL total, not a per-unit rate — summing a
+    // per-unit price across every row produces meaningless, wildly inflated
+    // totals (this caused negative "Gross Margin %" in real reports).
+    const scored = candidates.map((h) => {
+      let score = 0;
+      if (/\btotal\b/i.test(h)) score += 3;
+      if (/\b(unit|per|avg|average|rate)\b/i.test(h)) score -= 3;
+      score -= h.length * 0.01; // slight preference for shorter/simpler names on ties
+      return { h, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    map[logicalName] = scored[0].h;
   });
   return map;
 }

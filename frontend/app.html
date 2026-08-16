@@ -72,6 +72,9 @@
   .insight{background:var(--panel3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
   .insight .label{color:var(--muted);font-size:11.5px;margin-bottom:4px;}
   .insight .value{font-size:13.5px;font-weight:600;}
+  .insight.risk{border-left:3px solid var(--danger);background:rgba(255,92,92,.07);}
+  .insight.opportunity{border-left:3px solid var(--accent2);background:rgba(34,197,139,.07);}
+  .empty-note{color:var(--muted);font-size:13px;font-style:italic;}
   .rec-list{margin:10px 0 0;padding-left:20px;font-size:13.5px;line-height:1.9;color:#dbe1ec;}
 
   .ai-box{background:linear-gradient(135deg, rgba(91,140,255,.08), rgba(138,91,255,.08));border:1px solid rgba(91,140,255,.3);border-radius:14px;padding:20px;}
@@ -217,6 +220,12 @@
       <div id="aiResultBox" class="hidden" style="margin-top:20px;">
         <div class="section-title">Executive Summary</div>
         <div class="exec-summary" id="execSummaryText"></div>
+
+        <div class="section-title">🔴 Risk Points / Loss Areas</div>
+        <div class="insight-grid" id="riskGrid"></div>
+
+        <div class="section-title">🟢 Improvement Opportunities</div>
+        <div class="insight-grid" id="opportunityGrid"></div>
 
         <div class="section-title">Additional Insights</div>
         <div class="insight-grid" id="extraInsightsGrid"></div>
@@ -415,13 +424,23 @@ async function runAI(){
       businessType: lastResult.businessType,
       headers: lastResult.headers,
       kpis: lastResult.kpis,
-      sampleRows: lastResult.rows.slice(0, 15)
+      sampleRows: lastResult.rows.slice(0, 30)
     };
     const ai = await api('/ai/customize-report', {method:'POST', body: JSON.stringify(body)});
     lastAI = ai;
 
     document.getElementById('aiResultBox').classList.remove('hidden');
     document.getElementById('execSummaryText').textContent = ai.executiveSummary || '';
+
+    const riskGrid = document.getElementById('riskGrid');
+    riskGrid.innerHTML = (ai.riskPoints||[]).length
+      ? ai.riskPoints.map(r=>`<div class="insight risk"><div class="label">${r.label}</div><div class="value">${r.detail}</div></div>`).join('')
+      : '<div class="empty-note">Koi major risk detect nahi hua is data mein.</div>';
+
+    const oppGrid = document.getElementById('opportunityGrid');
+    oppGrid.innerHTML = (ai.opportunities||[]).length
+      ? ai.opportunities.map(o=>`<div class="insight opportunity"><div class="label">${o.label}</div><div class="value">${o.detail}</div></div>`).join('')
+      : '<div class="empty-note">Koi specific opportunity highlight nahi hui.</div>';
 
     const grid = document.getElementById('extraInsightsGrid');
     grid.innerHTML = (ai.extraInsights||[]).map(i=>`<div class="insight"><div class="label">${i.label}</div><div class="value">${i.value}</div></div>`).join('');
@@ -505,7 +524,12 @@ function downloadExcel(){
 
   // Sheet 4: AI Executive Summary (if generated)
   if(lastAI){
-    const aiRows = [["AI Executive Summary"], [lastAI.executiveSummary || ''], [], ["Additional Insights"]];
+    const aiRows = [["AI Executive Summary"], [lastAI.executiveSummary || ''], []];
+    aiRows.push(["Risk Points / Loss Areas"]);
+    (lastAI.riskPoints||[]).forEach(r=> aiRows.push([r.label, r.detail]));
+    aiRows.push([]); aiRows.push(["Improvement Opportunities"]);
+    (lastAI.opportunities||[]).forEach(o=> aiRows.push([o.label, o.detail]));
+    aiRows.push([]); aiRows.push(["Additional Insights"]);
     (lastAI.extraInsights||[]).forEach(i=> aiRows.push([i.label, i.value]));
     aiRows.push([]); aiRows.push(["Recommendations"]);
     (lastAI.recommendations||[]).forEach(r=> aiRows.push([r]));
@@ -540,6 +564,30 @@ async function downloadPdf(){
     doc.setFontSize(10);
     const lines = doc.splitTextToSize(lastAI.executiveSummary, 180);
     doc.text(lines, 14, y); y += lines.length * 5 + 6;
+
+    if((lastAI.riskPoints||[]).length){
+      if(y > 250){ doc.addPage(); y = 20; }
+      doc.setFontSize(13); doc.setTextColor(200,50,50); doc.text("Risk Points / Loss Areas", 14, y); doc.setTextColor(0); y += 7;
+      doc.setFontSize(10);
+      lastAI.riskPoints.forEach(r=>{
+        const rl = doc.splitTextToSize(`• ${r.label}: ${r.detail}`, 180);
+        doc.text(rl, 14, y); y += rl.length * 5 + 2;
+        if(y > 270){ doc.addPage(); y = 20; }
+      });
+      y += 4;
+    }
+
+    if((lastAI.opportunities||[]).length){
+      if(y > 250){ doc.addPage(); y = 20; }
+      doc.setFontSize(13); doc.setTextColor(30,150,100); doc.text("Improvement Opportunities", 14, y); doc.setTextColor(0); y += 7;
+      doc.setFontSize(10);
+      lastAI.opportunities.forEach(o=>{
+        const ol = doc.splitTextToSize(`• ${o.label}: ${o.detail}`, 180);
+        doc.text(ol, 14, y); y += ol.length * 5 + 2;
+        if(y > 270){ doc.addPage(); y = 20; }
+      });
+      y += 4;
+    }
 
     if((lastAI.recommendations||[]).length){
       if(y > 250){ doc.addPage(); y = 20; }

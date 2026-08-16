@@ -463,7 +463,9 @@ function downloadExcel(){
   const wb = XLSX.utils.book_new();
   const rows = lastResult.rows;
   const headers = lastResult.headers;
-  const numericCols = lastResult.numericCols;
+  // Use aggregatableCols (excludes date/ID-like columns) for SUM/AVG formulas —
+  // falls back to numericCols only for older backend responses.
+  const numericCols = lastResult.aggregatableCols || lastResult.numericCols;
 
   // Sheet 1: Cleaned Data
   const wsData = XLSX.utils.json_to_sheet(rows);
@@ -478,7 +480,7 @@ function downloadExcel(){
   });
   const wsKpi = XLSX.utils.aoa_to_sheet(kpiSheetRows);
 
-  // Add live SUM/AVERAGE formulas for each numeric column, appended below the KPI list
+  // Add live SUM/AVERAGE formulas for each genuinely aggregatable numeric column
   let r = kpiSheetRows.length + 2;
   XLSX.utils.sheet_add_aoa(wsKpi, [["Column-wise Formulas (live, recalculates if data changes)"]], {origin: `A${r}`});
   r += 1;
@@ -500,9 +502,12 @@ function downloadExcel(){
   wsKpi['!ref'] = XLSX.utils.encode_range(range);
   XLSX.utils.book_append_sheet(wb, wsKpi, "KPI Summary");
 
-  // Sheet 3: Category Summary (pivot-style, with SUMIF formulas)
-  const catCol = lastResult.textCols.find(c=>c !== lastResult.colMap?.date) || lastResult.textCols[0];
-  const valCol = numericCols[0];
+  // Sheet 3: Category Summary (pivot-style, with SUMIF formulas) —
+  // uses the SAME group/value columns as the dashboard's first chart
+  // (from colMap), never an arbitrary text/numeric column guess.
+  const firstChart = (lastResult.chartsConfig||[]).find(c => c.group !== 'date');
+  const catCol = firstChart ? lastResult.colMap[firstChart.group] : null;
+  const valCol = firstChart ? lastResult.colMap[firstChart.value] : numericCols[0];
   if(catCol && valCol){
     const catColIdx = headers.indexOf(catCol);
     const valColIdx = headers.indexOf(valCol);

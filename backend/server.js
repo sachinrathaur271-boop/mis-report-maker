@@ -11,6 +11,11 @@ const aiRoutes = require('./routes/ai');
 
 const app = express();
 
+// Render (and most cloud hosts) sit behind a reverse proxy, so Express needs
+// to trust the X-Forwarded-For header to correctly identify client IPs —
+// required for express-rate-limit to work properly.
+app.set('trust proxy', 1);
+
 // Allow the production Vercel URL, any Vercel preview URL for this project,
 // and localhost (for local testing). Adjust ALLOWED_ORIGIN_MATCH below if
 // your Vercel project name changes.

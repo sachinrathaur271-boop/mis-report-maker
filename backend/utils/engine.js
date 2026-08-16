@@ -40,6 +40,21 @@ function cleanRows(rows) {
     else textCols.push(h);
   });
 
+  // "aggregatableCols" = numeric columns that make sense to SUM/AVERAGE.
+  // Excludes: (a) date/timestamp columns (Excel stores dates as serial
+  // numbers, so they'd otherwise get misclassified as numeric and summing
+  // them is meaningless), and (b) ID-like columns (near-100% unique values,
+  // or header contains "id" / "number" / "no" as a whole word) — summing an
+  // Order ID column produces a large meaningless number.
+  const aggregatableCols = numericCols.filter((h) => {
+    if (/date|timestamp/i.test(h)) return false;
+    if (/\b(id|no|number|code)\b/i.test(h)) return false;
+    const values = out.map((r) => r[h]).filter((v) => v !== '' && v !== 0);
+    const uniqueRatio = values.length ? new Set(values).size / values.length : 0;
+    if (uniqueRatio > 0.95 && out.length > 20) return false; // looks like a unique identifier
+    return true;
+  });
+
   let filled = 0;
   out = out.map((r) => {
     const nr = { ...r };
@@ -70,7 +85,7 @@ function cleanRows(rows) {
   if (before2 - out.length) log.push(`Removed ${before2 - out.length} duplicate row(s).`);
 
   log.push(`Final: ${out.length} row(s), ${headers.length} column(s).`);
-  return { clean: out, headers, numericCols, textCols, log };
+  return { clean: out, headers, numericCols, aggregatableCols, textCols, log };
 }
 
 /** Compute KPIs for a given business template against cleaned rows. */

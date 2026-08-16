@@ -9,20 +9,27 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-  :root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--border:#2a2f3a;--text:#eef1f6;--muted:#9aa3b2;--accent:#5b8cff;--accent2:#22c58b;--danger:#ff5c5c;}
+  :root{
+    --bg:#0a0c10; --panel:#12151c; --panel2:#191d26; --border:#262b36;
+    --text:#f1f4f9; --muted:#9aa4b5; --accent:#5b8cff; --accent2:#22c58b;
+    --danger:#ff5c5c; --grad1:#5b8cff; --grad2:#8a5bff;
+  }
   *{box-sizing:border-box;}
-  body{margin:0;background:#0b0d12;color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
   .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px;}
-  h1{font-size:19px;}
-  input,select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);margin-bottom:10px;font-size:14px;}
-  label{font-size:12.5px;color:var(--muted);}
-  .btn{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:600;cursor:pointer;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:18px;}
+  h1{font-size:19px;display:flex;align-items:center;gap:10px;}
+  input,select{width:100%;padding:11px 13px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);margin-bottom:12px;font-size:14px;}
+  input:focus,select:focus{outline:none;border-color:var(--accent);}
+  label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px;}
+  .btn{background:var(--accent);color:#fff;border:none;padding:11px 20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;transition:filter .15s;}
+  .btn:hover{filter:brightness(1.1);}
   .btn.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text);}
   .btn.green{background:var(--accent2);}
+  .btn.full{width:100%;}
   .row{display:flex;gap:10px;flex-wrap:wrap;}
   .hidden{display:none !important;}
-  .error{color:var(--danger);font-size:13px;margin:6px 0;}
+  .error{color:var(--danger);font-size:13px;margin:6px 0;min-height:16px;}
   .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
   .kpi{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;}
   .kpi .label{color:var(--muted);font-size:12px;}
@@ -30,128 +37,200 @@
   .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .plan{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
   .plan h3{margin:0 0 6px;}
-  .userbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);}
+  .userbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap;gap:10px;}
   canvas{max-height:260px;}
   .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  /* --- Auth screen (login/signup) --- */
+  .auth-shell{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .auth-box{
+    display:grid;grid-template-columns:1fr 1fr;max-width:920px;width:100%;
+    border-radius:20px;overflow:hidden;border:1px solid var(--border);
+    background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);
+  }
+  @media(max-width:760px){ .auth-box{grid-template-columns:1fr;} .auth-hero{display:none;} }
+
+  .auth-hero{
+    background:radial-gradient(circle at 30% 20%, #24304f 0%, #0f1420 60%),
+               linear-gradient(160deg, var(--grad1), var(--grad2));
+    padding:40px 34px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;position:relative;
+  }
+  .auth-hero .logo-mark{
+    width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.15);
+    display:flex;align-items:center;justify-content:center;font-size:24px;backdrop-filter:blur(4px);
+    border:1px solid rgba(255,255,255,.25);
+  }
+  .auth-hero h2{font-size:26px;line-height:1.3;margin:22px 0 10px;}
+  .auth-hero p{color:rgba(255,255,255,.85);font-size:14px;line-height:1.6;margin:0 0 20px;}
+  .auth-hero .feat{display:flex;align-items:center;gap:10px;font-size:13.5px;color:rgba(255,255,255,.92);margin-bottom:10px;}
+  .auth-hero .feat .dot{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+  .auth-hero .mini-chart{
+    margin-top:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+    border-radius:14px;padding:16px;backdrop-filter:blur(6px);
+  }
+  .auth-hero .mini-chart .bars{display:flex;align-items:flex-end;gap:6px;height:60px;margin-top:10px;}
+  .auth-hero .mini-chart .bars div{flex:1;background:linear-gradient(180deg,#fff,rgba(255,255,255,.4));border-radius:4px 4px 0 0;}
+  .auth-hero .mini-chart .caption{font-size:11.5px;color:rgba(255,255,255,.75);}
+
+  .auth-form-side{padding:40px 36px;}
+  .auth-form-side h1{font-size:22px;margin:0 0 6px;}
+  .auth-form-side .sub{color:var(--muted);font-size:13.5px;margin:0 0 26px;}
+  .tabs{display:flex;gap:6px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:22px;}
+  .tab-btn{flex:1;background:transparent;border:none;color:var(--muted);padding:8px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .tab-btn.active{background:var(--accent);color:#fff;}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>📊 MIS Report Maker</h1>
 
-  <!-- AUTH SCREEN -->
-  <div class="card" id="authCard">
-    <div id="loginForm">
-      <h2>Login</h2>
-      <label>Email</label><input id="loginEmail" type="email">
-      <label>Password</label><input id="loginPassword" type="password">
-      <div class="error" id="loginError"></div>
-      <button class="btn" onclick="login()">Login</button>
-      <button class="btn secondary" onclick="toggleAuth()">Create account instead</button>
-    </div>
-    <div id="signupForm" class="hidden">
-      <h2>Create Account</h2>
-      <label>Name</label><input id="suName">
-      <label>Email</label><input id="suEmail" type="email">
-      <label>Password (min 6 chars)</label><input id="suPassword" type="password">
-      <label>Business Type</label>
-      <select id="suBusinessType">
-        <option value="retail">Retail / Sales</option>
-        <option value="mis">General MIS / Operations</option>
-        <option value="finance">Finance / Accounts</option>
-        <option value="general">General / Auto-detect</option>
-      </select>
-      <div class="error" id="signupError"></div>
-      <button class="btn" onclick="signup()">Sign Up</button>
-      <button class="btn secondary" onclick="toggleAuth()">Already have an account</button>
-    </div>
-  </div>
-
-  <!-- APP (shown after login) -->
-  <div id="appSection" class="hidden">
-    <div class="card userbar">
-      <span>Logged in as <b id="userName"></b> (<span id="userPlan"></span> plan — <span id="userUsage"></span>)</span>
-      <button class="btn secondary" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="card">
-      <h2>Upload & Generate Report</h2>
-      <label>Report Type / Business Template</label>
-      <select id="businessTypeSelect">
-        <option value="retail">Retail / Sales</option>
-        <option value="mis">General MIS / Operations</option>
-        <option value="finance">Finance / Accounts</option>
-        <option value="general">General / Auto-detect</option>
-      </select>
-      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
-      <div class="error" id="processError"></div>
-      <button class="btn" onclick="processFile()">Generate Report</button>
-    </div>
-
-    <div class="card hidden" id="resultsCard">
-      <h2 id="resultTitle">Results</h2>
-      <div class="kpi-grid" id="kpiGrid"></div>
-      <div class="charts-grid" id="chartsGrid" style="margin-top:16px;"></div>
-      <div class="row" style="margin-top:16px;">
-        <button class="btn green" onclick="downloadExcel()">⬇ Download Excel</button>
-        <button class="btn" onclick="downloadPdf()">⬇ Download PDF</button>
+<!-- AUTH SCREEN -->
+<div class="auth-shell" id="authCard">
+  <div class="auth-box">
+    <div class="auth-hero">
+      <div>
+        <div class="logo-mark">📊</div>
+        <h2>Raw data se boardroom-ready<br>dashboard, minutes mein.</h2>
+        <div class="feat"><span class="dot">✓</span> Auto data cleaning — duplicates, blanks, formatting</div>
+        <div class="feat"><span class="dot">✓</span> Instant KPIs & management summary</div>
+        <div class="feat"><span class="dot">✓</span> Excel + PDF report, one click download</div>
+      </div>
+      <div class="mini-chart">
+        <div class="caption">Revenue by Region</div>
+        <div class="bars">
+          <div style="height:40%"></div><div style="height:70%"></div><div style="height:55%"></div>
+          <div style="height:90%"></div><div style="height:65%"></div><div style="height:80%"></div>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Upgrade Plan (Manual UPI Payment)</h2>
-      <p style="color:var(--muted);font-size:13px;">UPI se payment karo, phir screenshot WhatsApp par bhejo. Payment confirm hote hi admin tumhara plan upgrade kar dega (usually within a few hours).</p>
-      <div class="pricing">
-        <div class="plan"><h3>Free</h3><p>3 reports/mo</p><p>₹0</p></div>
-        <div class="plan"><h3>Growth</h3><p>20 reports/mo</p><p>₹199</p><button class="btn" onclick="buyPlan('199')">Upgrade</button></div>
-        <div class="plan"><h3>Pro</h3><p>Unlimited</p><p>₹499</p><button class="btn" onclick="buyPlan('499')">Upgrade</button></div>
-      </div>
-    </div>
+    <div class="auth-form-side">
+      <h1>MIS Report Maker</h1>
+      <p class="sub">Business ke liye instant MIS reports.</p>
 
-    <!-- Manual payment modal -->
-    <div class="card hidden" id="payModal">
-      <h2>Complete Your Payment</h2>
-      <p style="font-size:14px;">Plan: <b id="payPlanLabel"></b> — Amount: <b id="payAmountLabel"></b></p>
-
-      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;margin:14px 0;">
-        <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 1 — Pay via UPI</p>
-        <p style="font-size:15px;margin:0 0 10px;">UPI ID: <b id="upiIdText">sachinrathaur271@okhdfcbank</b></p>
-        <a id="upiPayBtn" class="btn green" href="#" target="_blank">📱 Open UPI App & Pay</a>
-        <p style="font-size:12px;color:var(--muted);margin-top:8px;">Mobile par khulega to seedha app open hoga (GPay/PhonePe/Paytm). Desktop par UPI ID copy karke manually pay karo.</p>
+      <div class="tabs">
+        <button class="tab-btn active" id="tabLogin" onclick="setAuthTab('login')">Login</button>
+        <button class="tab-btn" id="tabSignup" onclick="setAuthTab('signup')">Create Account</button>
       </div>
 
-      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;">
-        <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 2 — Screenshot WhatsApp par bhejo</p>
-        <a id="waBtn" class="btn" href="#" target="_blank">💬 Send Screenshot on WhatsApp</a>
-        <p style="font-size:12px;color:var(--muted);margin-top:8px;">Payment confirm hone ke baad manually plan upgrade ho jayega.</p>
+      <div id="loginForm">
+        <label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com">
+        <label>Password</label><input id="loginPassword" type="password" placeholder="••••••••">
+        <div class="error" id="loginError"></div>
+        <button class="btn full" onclick="login()">Login</button>
       </div>
 
-      <button class="btn secondary" style="margin-top:14px;" onclick="closePayModal()">Close</button>
+      <div id="signupForm" class="hidden">
+        <label>Name</label><input id="suName" placeholder="Your name">
+        <label>Email</label><input id="suEmail" type="email" placeholder="you@example.com">
+        <label>Password (min 6 chars)</label><input id="suPassword" type="password" placeholder="••••••••">
+        <label>Business Type</label>
+        <select id="suBusinessType">
+          <option value="retail">Retail / Sales</option>
+          <option value="mis">General MIS / Operations</option>
+          <option value="finance">Finance / Accounts</option>
+          <option value="general">General / Auto-detect</option>
+        </select>
+        <div class="error" id="signupError"></div>
+        <button class="btn full" onclick="signup()">Sign Up</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- APP (shown after login) -->
+<div class="wrap hidden" id="appSection">
+  <h1>📊 MIS Report Maker</h1>
+
+  <div class="card userbar">
+    <span>Logged in as <b id="userName"></b> (<span id="userPlan"></span> plan — <span id="userUsage"></span>)</span>
+    <button class="btn secondary" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="card">
+    <h2>Upload & Generate Report</h2>
+    <label>Report Type / Business Template</label>
+    <select id="businessTypeSelect">
+      <option value="retail">Retail / Sales</option>
+      <option value="mis">General MIS / Operations</option>
+      <option value="finance">Finance / Accounts</option>
+      <option value="general">General / Auto-detect</option>
+    </select>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <div class="error" id="processError"></div>
+    <button class="btn" onclick="processFile()">Generate Report</button>
+  </div>
+
+  <div class="card hidden" id="resultsCard">
+    <h2 id="resultTitle">Results</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="charts-grid" id="chartsGrid" style="margin-top:16px;"></div>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn green" onclick="downloadExcel()">⬇ Download Excel</button>
+      <button class="btn" onclick="downloadPdf()">⬇ Download PDF</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Upgrade Plan (Manual UPI Payment)</h2>
+    <p style="color:var(--muted);font-size:13px;">UPI se payment karo, phir screenshot WhatsApp par bhejo. Payment confirm hote hi admin tumhara plan upgrade kar dega (usually within a few hours).</p>
+    <div class="pricing">
+      <div class="plan"><h3>Free</h3><p>3 reports/mo</p><p>₹0</p></div>
+      <div class="plan"><h3>Growth</h3><p>20 reports/mo</p><p>₹199</p><button class="btn" onclick="buyPlan('199')">Upgrade</button></div>
+      <div class="plan"><h3>Pro</h3><p>Unlimited</p><p>₹499</p><button class="btn" onclick="buyPlan('499')">Upgrade</button></div>
+    </div>
+  </div>
+
+  <!-- Manual payment modal -->
+  <div class="card hidden" id="payModal">
+    <h2>Complete Your Payment</h2>
+    <p style="font-size:14px;">Plan: <b id="payPlanLabel"></b> — Amount: <b id="payAmountLabel"></b></p>
+
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;margin:14px 0;">
+      <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 1 — Pay via UPI</p>
+      <p style="font-size:15px;margin:0 0 10px;">UPI ID: <b id="upiIdText">sachinrathaur271@okhdfcbank</b>
+        <button class="btn secondary" style="padding:4px 10px;font-size:12px;margin-left:8px;" onclick="copyUpiId()">Copy</button>
+      </p>
+      <a id="upiPayBtn" class="btn green" href="#" target="_blank">📱 Open UPI App & Pay (mobile only)</a>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Mobile par khulega to seedha app open hoga (GPay/PhonePe/Paytm). Laptop/desktop par upar diye UPI ID ko "Copy" karke apne phone se manually pay karo.</p>
+    </div>
+
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Step 2 — Screenshot WhatsApp par bhejo</p>
+      <a id="waBtn" class="btn" href="#" target="_blank">💬 Send Screenshot on WhatsApp</a>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Payment confirm hone ke baad manually plan upgrade ho jayega.</p>
+    </div>
+
+    <button class="btn secondary" style="margin-top:14px;" onclick="closePayModal()">Close</button>
+  </div>
+</div>
+
 <script>
-const API_BASE = "https://mis-report-maker.onrender.com/api"; // change to your deployed backend URL
+const API_BASE = "https://mis-report-maker.onrender.com/api"; // apna deployed backend URL
 let token = localStorage.getItem('token') || null;
 let currentUser = null;
 let lastResult = null;
 let chartInstances = [];
 
-function toggleAuth(){
-  document.getElementById('loginForm').classList.toggle('hidden');
-  document.getElementById('signupForm').classList.toggle('hidden');
+function setAuthTab(which){
+  document.getElementById('tabLogin').classList.toggle('active', which==='login');
+  document.getElementById('tabSignup').classList.toggle('active', which==='signup');
+  document.getElementById('loginForm').classList.toggle('hidden', which!=='login');
+  document.getElementById('signupForm').classList.toggle('hidden', which!=='signup');
 }
 
 async function api(path, opts={}){
-  const res = await fetch(API_BASE + path, {
-    ...opts,
-    headers: {
-      'Content-Type': opts.body instanceof FormData ? undefined : 'application/json',
-      ...(token ? {Authorization: 'Bearer ' + token} : {}),
-      ...(opts.headers||{})
-    }
-  });
+  const isFormData = opts.body instanceof FormData;
+  const headers = {
+    ...(token ? {Authorization: 'Bearer ' + token} : {}),
+    ...(opts.headers||{})
+  };
+  if(!isFormData) headers['Content-Type'] = 'application/json';
+  // IMPORTANT: for FormData, do NOT set Content-Type manually — the browser
+  // needs to set it itself (with the correct multipart boundary), otherwise
+  // file uploads silently fail on the backend.
+
+  const res = await fetch(API_BASE + path, { ...opts, headers });
   const data = await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(data.error || 'Request failed');
   return data;
@@ -327,6 +406,12 @@ async function buyPlan(plan){
 
 function closePayModal(){
   document.getElementById('payModal').classList.add('hidden');
+}
+
+function copyUpiId(){
+  navigator.clipboard.writeText(UPI_ID).then(()=>{
+    alert('UPI ID copied: ' + UPI_ID);
+  });
 }
 </script>
 </body>

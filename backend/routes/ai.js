@@ -9,17 +9,18 @@ const router = express.Router();
  *
  * User types free-text instructions (e.g. "Mujhe region-wise profit trend
  * chahiye aur ek risk warning agar kisi mahine sales 20% se zyada gira ho").
- * This calls Claude to return:
+ * This calls Google Gemini to return:
  *   - executiveSummary: a management-ready paragraph
  *   - extraInsights: array of {label, value} bonus KPIs/observations
  *   - recommendations: array of short action bullets
+ * Uses Gemini's free tier (get key from aistudio.google.com/app/apikey).
  * All computed ONLY from the data summary sent (small sample + KPI numbers),
  * never the full raw dataset, to keep payload small and reasonably private.
  */
 router.post('/customize-report', authMiddleware, async (req, res) => {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: 'AI feature not configured. Set ANTHROPIC_API_KEY on the server.' });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'AI feature not configured. Set GEMINI_API_KEY on the server.' });
     }
 
     const { instructions, businessType, headers, kpis, sampleRows } = req.body;
@@ -37,7 +38,8 @@ router.post('/customize-report', authMiddleware, async (req, res) => {
     const systemPrompt = `You are a business analyst generating a management report add-on.
 You will be given: (1) a user's free-text instructions in Hindi/English/Hinglish describing what
 they want added or improved in their report, and (2) a JSON summary of their data (headers, computed
-KPIs, and a small row sample). Respond ONLY with valid JSON (no markdown, no code fences) in this exact shape:
+KPIs, and a small row sample). Respond ONLY with valid JSON (no markdown, no code fences, no extra text
+before or after) in this exact shape:
 {
   "executiveSummary": "2-4 sentence management-ready summary paragraph, in the same language mix the user used",
   "extraInsights": [{"label": "short label", "value": "short value or finding"}],
@@ -50,18 +52,20 @@ of fabricating it.`;
 
     const userMessage = `User's instructions: """${instructions}"""\n\nData summary:\n${JSON.stringify(dataSummary, null, 2)}`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const model = 'gemini-2.0-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }]
+        contents: [{ parts: [{ text: userMessage }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1000,
+          responseMimeType: 'application/json'
+        }
       })
     });
 
@@ -70,7 +74,7 @@ of fabricating it.`;
       return res.status(502).json({ error: 'AI request failed.', details: data });
     }
 
-    const rawText = (data.content || []).map((b) => b.text || '').join('');
+    const rawText = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
     const cleaned = rawText.replace(/```json|```/g, '').trim();
 
     let parsed;

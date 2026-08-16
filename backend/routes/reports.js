@@ -39,7 +39,7 @@ router.post('/process', authMiddleware, upload.single('file'), async (req, res) 
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-    const { clean, headers, numericCols, textCols, log } = cleanRows(rawRows);
+    const { clean, headers, numericCols, aggregatableCols, textCols, log } = cleanRows(rawRows);
     const { colMap, kpis } = computeKPIs(clean, headers, template);
 
     // increment usage + save history
@@ -60,6 +60,7 @@ router.post('/process', authMiddleware, upload.single('file'), async (req, res) 
       cleaningLog: log,
       headers,
       numericCols,
+      aggregatableCols,
       textCols,
       colMap,
       kpis,

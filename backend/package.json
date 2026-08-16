@@ -1,8 +1,9 @@
 {
   "name": "mis-report-maker-backend",
   "version": "1.0.0",
-  "description": "MIS Report Maker - Backend API (Auth + Reports + Razorpay Billing)",
+  "description": "MIS Report Maker - Backend API (Auth + Reports + AI + Manual UPI Billing)",
   "main": "server.js",
+  "engines": { "node": ">=18.0.0" },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
@@ -17,7 +18,8 @@
     "multer": "^1.4.5-lts.1",
     "xlsx": "^0.18.5",
     "express-rate-limit": "^7.4.0",
-    "cookie-parser": "^1.4.6"
+    "cookie-parser": "^1.4.6",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

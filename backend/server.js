@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth');
 const billingRoutes = require('./routes/billing');
 const reportsRoutes = require('./routes/reports');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date() }));
 
